@@ -1,0 +1,25 @@
+	-- AUDIT TABLES
+
+-- EMPLOYEES AUDIT TABLES
+
+CREATE TABLE EMPLOYEES_AUDIT (
+	AUDIT_ID INT auto_increment PRIMARY KEY,
+    EMPLOYEE_ID INT,
+    FIRST_NAME VARCHAR(50),
+    LAST_NAME VARCHAR(50),
+    ACTION_TYPE VARCHAR(100),
+    ACTION_TIME DATETIME
+) AUTO_INCREMENT = 100;
+
+SELECT * FROM EMPLOYEES_AUDIT;
+
+CREATE TABLE employee_salary_audit
+(
+    audit_id INT AUTO_INCREMENT PRIMARY KEY,
+    employee_id INT,
+    old_salary DECIMAL(10,2),
+    new_salary DECIMAL(10,2),
+    changed_on DATETIME
+);
+
+SELECT * FROM employee_salary_audit;

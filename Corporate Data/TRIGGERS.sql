@@ -1,0 +1,143 @@
+	-- Triggers in MySQL
+    -- ITS A PIECE OF SQL THAT RUN AUTOMATICALLY RUN WHEN SPECIFIC EVENT HAPPEN.
+	-- A Trigger is a special SQL block that automatically executes when:
+	-- 	INSERT USE NEW
+	-- 	UPDATE USE NEW, OLD
+	-- 	DELETE USE OLD
+    
+    
+-- BEFORE AUDIT
+-- Q. No employee can be inserted with a salary less than 20,000.
+USE CORP_DATA;
+
+DELIMITER $$
+CREATE TRIGGER SALARY_LIMIT_RESTRICTIONS
+BEFORE INSERT ON EMPLOYEES
+FOR EACH ROW
+BEGIN
+		IF NEW.SALARY < 20000 THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'Error as salary is not as per the expectation of company norms.';
+END IF;
+END $$
+DELIMITER ;
+
+DROP TRIGGER SALARY_LIMIT_RESTRICTIONS;
+
+INSERT INTO EMPLOYEES (SALARY)
+VALUES (19999);
+
+SET AUTOCOMMIT = 0;
+ROLLBACK;
+SELECT * FROM EMPLOYEES;
+
+-- AFTER INSERT
+
+DELIMITER //
+CREATE TRIGGER STORE_INFO_AFTER_NEW_DATA
+AFTER INSERT ON EMPLOYEES
+FOR EACH ROW
+BEGIN
+		INSERT INTO EMPLOYEES_AUDIT
+        (EMPLOYEE_ID , FIRST_NAME, LAST_NAME, ACTION_TYPE, ACTION_TIME)
+        VALUES
+        (NEW.EMPLOYEE_ID, NEW.FIRST_NAME, NEW.LAST_NAME, 'INSERTED NEW EMPLOYEE', NOW());
+        
+END //      
+DELIMITER ;
+DROP trigger STORE_INFO_AFTER_NEW_DATA;
+
+	-- BEFORE UPDATE
+
+-- In employees, salary must never go below 25000.
+DELIMITER **
+CREATE TRIGGER SALARY_RESTRICTIONS
+BEFORE UPDATE ON EMPLOYEES
+FOR EACH ROW
+BEGIN
+		IF NEW.SALARY < 25000 THEN
+        SIGNAL sqlstate '45000'
+        SET message_text = 'SALARY CAN NOT BE UPDATED BELOW 25000';
+        END IF;
+END **
+DELIMITER ;
+
+DROP TRIGGER SALARY_RESTRICTIONS;
+
+UPDATE EMPLOYEES
+SET SALARY = 24000
+WHERE EMPLOYEE_ID = 11;
+
+-- In employees, salary can increase, but it cannot be reduced from the current value.
+
+DELIMITER ^^
+CREATE TRIGGER SALARY_1
+BEFORE UPDATE ON EMPLOYEES
+FOR EACH ROW
+BEGIN
+		IF NEW.SALARY < OLD.SALARY THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'SALARY CAN NOT BE LOWER/SAME OF EXISTING SALARY';
+        END IF;
+END ^^
+DELIMITER ;
+DROP TRIGGER SALARY_1;
+
+UPDATE EMPLOYEES
+SET SALARY = 24000
+WHERE EMPLOYEE_ID = 11;
+
+-- An employee can change department only if the new department is not NULL.
+
+DELIMITER ^^
+CREATE TRIGGER DEPARTMENT_UPDATE
+BEFORE UPDATE ON EMPLOYEES
+FOR EACH ROW
+BEGIN
+		IF NEW.DEPARTMENT_ID IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+        SET MESSAGE_TEXT = 'DEPARTMENT CANNOT BE NULL';
+        END IF;
+END ^^
+DELIMITER ;
+DROP TRIGGER DEPARTMENT_UPDATE;
+
+UPDATE EMPLOYEES
+SET DEPARTMENT_ID = NULL
+WHERE EMPLOYEE_ID = 11;
+
+-- after update
+
+DELIMITER //
+
+CREATE TRIGGER employee_salary_audit_trigger
+AFTER UPDATE
+ON employees
+FOR EACH ROW
+BEGIN
+ IF NEW.SALARY <> OLD.SALARY THEN
+    INSERT INTO employee_salary_audit
+    (
+        employee_id,
+        old_salary,
+        new_salary,
+        changed_on
+    )
+    VALUES
+    (
+        OLD.employee_id,
+        OLD.salary,
+        NEW.salary,
+        NOW()
+    );
+END IF;
+END //
+
+DELIMITER ;
+
+UPDATE employees
+SET salary = 70000
+WHERE employee_id = 10;
+set sql_safe_updates = 0;
+UPDATE employees
+SET salary = salary + 5000;
